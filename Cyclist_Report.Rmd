@@ -1,0 +1,247 @@
+---
+title: "Cyclist Project"
+author: "Ibrahim Sherif Kamal"
+date: "9/21/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE) 
+```
+
+
+
+## The scenario
+
+In this scenario, You are a junior data analyst working in the marketing analyst team at **Cyclistic**, a bike-share company in Chicago. The director of marketing believes the company’s future success depends on maximizing the number of annual memberships. Therefore, your team wants to understand how casual riders and annual members use **Cyclistic** bikes differently. From these insights, your team will design a new marketing strategy to convert casual riders into annual members. But first, **Cyclistic** executives must approve your recommendations, so they must be backed up with compelling data insights and professional data visualizations.
+
+
+## **Business Task**
+
+## How do annual members and casual riders use Cyclistic bikes differently?
+
+
+
+
+
+
+
+#### Packages
+
+```{r cyclist library}
+
+library("tidyverse")
+library("lubridate")
+library("ggplot2")
+library("scales")
+library("janitor")
+library("readr")
+```
+
+### Importing the Data
+
+the data of last 12 month
+
+```{r read.csv function}
+
+csv1 <- read.csv("./csv/202004-divvy-tripdata.csv")
+csv2 <- read.csv("./csv/202005-divvy-tripdata.csv")
+csv3 <- read.csv("./csv/202006-divvy-tripdata.csv")
+csv4 <- read.csv("./csv/202007-divvy-tripdata.csv")
+csv5 <- read.csv("./csv/202008-divvy-tripdata.csv")
+csv6 <- read.csv("./csv/202009-divvy-tripdata.csv")
+csv7 <- read.csv("./csv/202010-divvy-tripdata.csv")
+csv8 <- read.csv("./csv/202011-divvy-tripdata.csv")
+csv9 <- read.csv("./csv/202012-divvy-tripdata.csv")
+csv10 <- read.csv("./csv/202101-divvy-tripdata.csv")
+csv11 <- read.csv("./csv/202102-divvy-tripdata.csv")
+csv12 <- read.csv("./csv/202103-divvy-tripdata.csv")
+```
+
+#### Merging multiple csv files
+
+merging them into a single Data frame
+
+```{r merging using rbind function }
+
+biker_ride <- rbind(csv1, csv2, csv3, csv4, csv5, csv6, csv7, csv8, csv9, csv10, csv11, csv12)
+```
+
+#### Rechecking for empty columns or rows
+
+after cleaning the data over Excel
+
+```{r}
+
+dim(biker_ride)
+
+biker_ride <- janitor::remove_empty(biker_ride,which =  c("cols"))
+
+biker_ride <<- janitor::remove_empty(biker_ride, which = c("rows"))
+
+dim(biker_ride)
+```
+
+#### Changing weekdays and ride duration data into a date
+
+by using the lubridate function
+
+```{r}
+biker_ride$day_of_week <- lubridate::wday(biker_ride$day_of_week, label = TRUE)
+
+biker_ride$ride_length <- lubridate::hms(biker_ride$ride_length)
+```
+
+#### the total number of every bike model
+
+```{r message=FALSE, warning=FALSE}
+total_bike <- biker_ride %>% 
+  group_by(rideable_type) %>% 
+  summarize(bike_total_use = n())
+```
+
+```{r}
+print(total_bike)
+```
+
+#### showing the total number of each bike type **visually**
+```{r}
+ggplot(data = biker_ride)+
+  geom_bar(mapping = aes(x = rideable_type, fill =  rideable_type))+
+  labs(x = " bike type ", y = "total number of customers bike usages")
+```
+
+
+#### Total number of bike used by every customer type
+
+```{r message=FALSE, warning=FALSE}
+biker_ride_type <- biker_ride %>% 
+  group_by(member_casual, rideable_type) %>% 
+  summarize(member_casual_total_use = n()) %>% 
+  arrange(rideable_type)
+```
+
+```{r}
+print(biker_ride_type)
+```
+
+
+#### The difference between every customer type bike use **Visualization**
+using ggplot2 library
+
+
+
+
+```{r}
+ggplot(data = biker_ride) +
+  geom_bar(mapping = aes( x = rideable_type, fill = member_casual), position = "dodge")+
+  labs(title = "bike usage per model last 12 month",subtitle = "difference between casual and member usage over bikes", caption = "this data from the last 12 month")+
+  scale_y_continuous(labels = comma)+
+  labs(x= "bike type ", y = "total number of bikes usage")
+```
+
+
+
+#### The difference between member and casual over days last 12 month
+
+
+```{r message=FALSE, warning=FALSE}
+bike_ride_week <- biker_ride %>% 
+  group_by(member_casual, day_of_week) %>% 
+  summarise( member_vs_casual_per_day = n()) 
+#arrange(day_of_week)
+```
+
+```{r}
+print(bike_ride_week)
+```
+
+
+#### Customer usage over days last 12 month **Visualization**
+customer type:
+
+* Casual
+
+* Member
+
+
+
+
+```{r}
+ggplot(data = biker_ride)+
+  geom_bar(mapping = aes(x = day_of_week, fill = member_casual), position = "dodge")+
+  scale_y_continuous(labels = comma)+
+  labs(title = "bike usage per day last 12 month", subtitle = "difference between casual and member usage per day", caption = "this data from last 12 month")+
+  labs(x = "day", y = "bike usage of customer type per day")
+```
+
+
+#### The bike rides duration difference 
+between casual and member customers
+
+
+```{r}
+biker_ride_length <- biker_ride %>% 
+  add_column(ride_length_min = as.numeric(biker_ride$ride_length)/ 60)  
+```
+
+
+
+```{r}
+biker_ride_duration <- biker_ride_length %>% 
+group_by(member_casual, day_of_week)  %>% 
+summarize( max_duration_minutes = max(ride_length_min), average_duration_minutes = mean(ride_length_min), total_duration_minutes = sum(ride_length_min)) %>% 
+arrange(day_of_week)
+```
+
+
+```{r}
+print(biker_ride_duration)
+```
+
+
+
+#### bike rides duration difference **Visualiztion**
+
+
+
+```{r}
+ggplot(data = biker_ride_duration)+ 
+  geom_col( mapping = aes(x = day_of_week , y = average_duration_minutes , fill = member_casual), position = "dodge")+
+  labs(x = "day", y = "average bike ridding duration")+
+  labs(title = "average duration in minutes ridding a bike ", subtitle = "minutes spent ridding a bike between customer type over days", caption = "this data from last 12 month")+
+  scale_y_continuous(labels = label_number( suffix = " Avg"))
+```
+
+
+
+## Key Findings
+
+* The docked bike option is far more popular than both classic bikes and electric bikes
+
+
+* Annual members rent more bike models overall
+
+* Weekend are the most days casual members rent bikes
+
+* Sunday bike rent is almost equal between casual and members
+
+* Regardless of being a member or not, the most popular day to rent a bike is Saturday
+
+* Saturday is the only day of the week last 12 month that casual users bikes rent exceeds annual members
+
+* casual users spend more time riding a bike, every day of the week last 12 month 
+
+
+
+## Conclusion
+
+### Three recommendations based on my analysis
+
+* Offer a **weekend membership** at a different price point than the full annual membership to entice casual users into become members.
+
+* increase number of **electric bikes**, to encourage casual users into becoming members because they tend to spend more time riding bikes.
+
+* create **annual-membership** promotion for customers that spent long time riding bikes, to make casual users realize over their subconscious that they spend long time riding bikes so casual users feel tempted into becoming annual members  
+
+
